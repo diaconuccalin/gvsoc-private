@@ -1,6 +1,6 @@
 include test.mk
 
-CMAKE_FLAGS ?= -j 16
+CMAKE_FLAGS ?= -j 2
 CMAKE ?= cmake
 
 ifeq ($(TARGETS),)
