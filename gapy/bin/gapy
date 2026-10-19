@@ -95,7 +95,7 @@ try:
         #   - Legacy gapy target properties: "KEY=VALUE" (or comma-separated).
         #   - gvrun target qualifiers:       "<name>.KEY=VALUE", where <name>
         #     is one of gvrun.target_qualifiers.QUALIFIER_HANDLERS (config,
-        #     attr, param, ...).  Those go through gvrun's dispatcher,
+        #     attr, timing).  Those go through gvrun's dispatcher,
         #     not gapy's target_properties machinery.
         target_name = args.target
         if ':' in target_name:
@@ -107,9 +107,15 @@ try:
                 from gvrun.target_qualifiers import QUALIFIER_HANDLERS
                 known_qualifiers = set(QUALIFIER_HANDLERS)
             except ImportError:
-                known_qualifiers = set()
+                known_qualifiers = None
             for seg in segments[1:]:
                 head = seg.split('=', 1)[0]
+                if '.' in head and known_qualifiers is None:
+                    # Without gvrun, a qualifier would silently turn into
+                    # a legacy property with a dotted name
+                    raise RuntimeError(
+                        f"Target qualifier '{seg}' in '{args.target}' needs "
+                        "gvrun.target_qualifiers, which cannot be imported")
                 if '.' in head and head.split('.', 1)[0] in known_qualifiers:
                     qualifier_segments.append(seg)
                 else:
