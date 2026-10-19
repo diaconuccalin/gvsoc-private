@@ -21,7 +21,7 @@ TARGETS ?= rv64 \
     pulp.snitch.snitch_cluster_single \
     chimera \
     snitch_testbench \
-    magia_v2 \
+    magia_v3 \
 	mempool
 
 RUN_TARGETS = $(TARGETS) default
@@ -50,8 +50,14 @@ INSTALLDIR = install
 endif
 endif
 
-# Absolute install path, needed for things like configure --prefix and rpaths
+# Absolute install path, needed for things like configure --prefix
 INSTALLDIR_ABS := $(abspath $(INSTALLDIR))
+
+# Build RPATH of the model .so files, relative to where each one is installed:
+# install/lib itself, then install/lib seen from up to 5 levels of
+# install/<dir>/... (models sit up to 4 levels deep), so a moved or copied
+# install tree still finds its shared libraries.
+GVSOC_BUILD_RPATH = $$ORIGIN;$$ORIGIN/../lib;$$ORIGIN/../../lib;$$ORIGIN/../../../lib;$$ORIGIN/../../../../lib;$$ORIGIN/../../../../../lib
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
 
@@ -93,7 +99,7 @@ build: gvrun.build
 	# shared libraries at run time without LD_LIBRARY_PATH.
 	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
-		-DCMAKE_BUILD_RPATH=$(INSTALLDIR_ABS)/lib \
+		'-DCMAKE_BUILD_RPATH=$(GVSOC_BUILD_RPATH)' \
 		-DGVSOC_MODULES="$(GVSOC_MODULES);$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
@@ -121,7 +127,7 @@ test.withbuild: riscv
 # Sphinx conf.py walk each module root and embed its docs/ tree (target
 # pages in the user manual, component pages in the developer manual), the
 # documentation counterpart of CMake pulling in each module's CMakeLists.
-doc: export GVSOC_MODULES := $(GVSOC_MODULES)
+doc: export GVSOC_MODULES := $(GVSOC_MODULES);$(MODULES)
 doc:
 	cd engine/docs/user_manual && $(MAKE) html
 	cd engine/docs/developer_manual && $(MAKE) html
